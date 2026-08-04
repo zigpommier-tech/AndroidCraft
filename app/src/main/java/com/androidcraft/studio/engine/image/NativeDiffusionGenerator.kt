@@ -6,28 +6,31 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * Real on-device text-to-image via a native stable-diffusion.cpp bridge (single-file GGUF model,
- * fully offline). The entire diffusion pipeline — tokenizer, scheduler, UNet, VAE — runs in the
- * bundled C++ library, so this class only bridges to it over JNI.
+ * Real on-device text-to-image via a native stable-diffusion.cpp bridge, fully offline. The whole
+ * diffusion pipeline — tokenizer, scheduler, UNet, VAE — runs in the bundled C++ library, so this
+ * class only bridges to it over JNI.
  *
- * The native library is loaded lazily; if it isn't present in the build, or the model hasn't been
- * downloaded yet, [status] reports the backend as unavailable and the UI steers the user to the
- * Models tab instead of failing.
+ * The model is any Stable Diffusion `.gguf` or `.safetensors` file the user downloads into the
+ * models directory (from the Models tab). If the native library isn't present or no model has been
+ * downloaded, [status] reports the backend as unavailable so the UI can steer the user instead of
+ * failing.
  */
-class NativeDiffusionGenerator(modelsDir: File) : ImageGenerator {
+class NativeDiffusionGenerator(private val modelsDir: File) : ImageGenerator {
 
     override val method = ImageMethod.NATIVE
 
-    private val modelFile = File(modelsDir, MODEL_FILE_NAME)
+    private fun modelFile(): File? = modelsDir.listFiles()?.firstOrNull { f ->
+        f.isFile && (f.name.endsWith(".gguf", true) || f.name.endsWith(".safetensors", true))
+    }
 
     override fun status(): GeneratorStatus = when {
         !libAvailable -> GeneratorStatus(
             available = false,
-            hint = "Native diffusion engine isn't included in this build yet.",
+            hint = "Native diffusion engine isn't included in this build.",
         )
-        !modelFile.exists() -> GeneratorStatus(
+        modelFile() == null -> GeneratorStatus(
             available = false,
-            hint = "Download a Stable Diffusion GGUF model from the Models tab.",
+            hint = "Download a Stable Diffusion model (.gguf/.safetensors) from the Models tab.",
         )
         else -> GeneratorStatus(available = true, hint = "On-device diffusion · CPU")
     }
@@ -39,11 +42,11 @@ class NativeDiffusionGenerator(modelsDir: File) : ImageGenerator {
         onProgress: suspend (Float) -> Unit,
     ): Bitmap = withContext(Dispatchers.Default) {
         check(libAvailable) { "Native diffusion library not available" }
-        check(modelFile.exists()) { "Model not downloaded" }
+        val model = modelFile() ?: error("No Stable Diffusion model downloaded")
         onProgress(0.02f)
         val effectiveSeed = seed ?: prompt.lowercase().hashCode().toLong()
         val pixels = nativeTxt2Img(
-            modelFile.absolutePath,
+            model.absolutePath,
             prompt,
             steps.coerceIn(1, 50),
             effectiveSeed,
@@ -51,13 +54,14 @@ class NativeDiffusionGenerator(modelsDir: File) : ImageGenerator {
             SIZE,
         )
         onProgress(0.98f)
+        checkNotNull(pixels) { "Diffusion returned no image" }
         val bitmap = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888)
         bitmap.setPixels(pixels, 0, SIZE, 0, 0, SIZE, SIZE)
         onProgress(1f)
         bitmap
     }
 
-    /** Implemented in the native `sdjni` library. Returns SIZE*SIZE ARGB pixels. */
+    /** Implemented in the native `sdjni` library. Returns SIZE*SIZE ARGB pixels, or null on failure. */
     private external fun nativeTxt2Img(
         modelPath: String,
         prompt: String,
@@ -65,10 +69,9 @@ class NativeDiffusionGenerator(modelsDir: File) : ImageGenerator {
         seed: Long,
         width: Int,
         height: Int,
-    ): IntArray
+    ): IntArray?
 
     companion object {
-        const val MODEL_FILE_NAME = "sd15.gguf"
         private const val SIZE = 512
 
         private val libAvailable: Boolean = runCatching {

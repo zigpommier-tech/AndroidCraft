@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -59,8 +60,8 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
     if (showAddDialog) {
         AddModelDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { name, url ->
-                viewModel.addCustomModel(name, url, Modality.TEXT)
+            onConfirm = { name, url, modality ->
+                viewModel.addCustomModel(name, url, modality)
                 showAddDialog = false
             },
         )
@@ -141,18 +142,35 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
 @Composable
 private fun AddModelDialog(
     onDismiss: () -> Unit,
-    onConfirm: (name: String, url: String) -> Unit,
+    onConfirm: (name: String, url: String, modality: Modality) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
+    var modality by remember { mutableStateOf(Modality.TEXT) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add a text model") },
+        title = { Text("Add a model by URL") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = modality == Modality.TEXT,
+                        onClick = { modality = Modality.TEXT },
+                        label = { Text("Chat (.task)") },
+                    )
+                    FilterChip(
+                        selected = modality == Modality.IMAGE,
+                        onClick = { modality = Modality.IMAGE },
+                        label = { Text("Image (SD .gguf)") },
+                    )
+                }
                 Text(
-                    "Paste a direct link to a LiteRT .task chat model (e.g. a Hugging Face " +
-                        "resolve URL). It downloads and runs fully on-device.",
+                    if (modality == Modality.TEXT) {
+                        "Direct link to a LiteRT .task chat model (e.g. a Hugging Face resolve URL)."
+                    } else {
+                        "Direct link to a Stable Diffusion .gguf/.safetensors model for the on-device " +
+                            "diffusion engine."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -166,7 +184,7 @@ private fun AddModelDialog(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text("Model URL (.task)") },
+                    label = { Text("Model URL") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -174,7 +192,7 @@ private fun AddModelDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(name.ifBlank { "Custom model" }, url) },
+                onClick = { onConfirm(name.ifBlank { "Custom model" }, url, modality) },
                 enabled = url.isNotBlank(),
             ) { Text("Add") }
         },

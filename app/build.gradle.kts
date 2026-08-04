@@ -7,6 +7,7 @@ plugins {
 android {
     namespace = "com.androidcraft.studio"
     compileSdk = 35
+    ndkVersion = "27.0.12077973"
 
     defaultConfig {
         applicationId = "com.androidcraft.studio"
@@ -17,6 +18,24 @@ android {
 
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        // Native on-device diffusion (stable-diffusion.cpp). arm64 only — the target for
+        // modern phones and the only ABI the diffusion engine is expected to run on.
+        ndk {
+            abiFilters += "arm64-v8a"
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-O3"
+            }
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 

@@ -80,6 +80,23 @@ object ModelCatalog {
 
         // ---- Image ----
         ModelSpec(
+            id = "sd15-diffusion",
+            displayName = "Stable Diffusion 1.5",
+            publisher = "Runwayml · single-file",
+            modality = Modality.IMAGE,
+            runtime = Runtime.DIFFUSION,
+            description = "Full Stable Diffusion 1.5 weights for the on-device diffusion engine " +
+                "(stable-diffusion.cpp). Real text-to-image, fully offline. Large download; " +
+                "generation is CPU-bound so expect tens of seconds per image on a flagship. " +
+                "You can also add a smaller quantized GGUF via ‘Add by URL’.",
+            downloadUrl = "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/" +
+                "resolve/main/v1-5-pruned-emaonly.safetensors",
+            fileName = "sd15.safetensors",
+            approxBytes = 4265L * MB,
+            minRamBytes = 6L * GB,
+            quantization = "fp16",
+        ),
+        ModelSpec(
             id = "procedural-image",
             displayName = "Procedural Preview Renderer",
             publisher = "AndroidCraft",

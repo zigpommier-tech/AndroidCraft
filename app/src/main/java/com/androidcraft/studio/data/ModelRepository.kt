@@ -108,7 +108,7 @@ class ModelRepository(
         val cleanName = displayName.trim().ifBlank { "Custom model" }
         val id = "custom-" + System.nanoTime().toString(36)
         val safe = cleanName.lowercase(Locale.US).replace(Regex("[^a-z0-9]+"), "-").trim('-')
-        val ext = if (modality == Modality.TEXT) ".task" else ".bin"
+        val ext = if (modality == Modality.TEXT) ".task" else ".gguf"
         val spec = ModelSpec(
             id = id,
             displayName = cleanName,
