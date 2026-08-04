@@ -95,6 +95,9 @@ dependencies {
     // On-device LLM inference (Google AI Edge / MediaPipe GenAI).
     implementation(libs.mediapipe.tasks.genai)
 
+    // On-device ONNX Runtime for the ONNX diffusion image engine.
+    implementation(libs.onnxruntime.android)
+
     debugImplementation(libs.androidx.ui.tooling)
 
     testImplementation(libs.junit)

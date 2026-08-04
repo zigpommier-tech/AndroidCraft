@@ -23,10 +23,15 @@ class ImageEngine(context: Context) {
         OnnxDiffusionGenerator(modelsDir),
     )
 
+    private val onnx: OnnxDiffusionGenerator = generators.filterIsInstance<OnnxDiffusionGenerator>().first()
+
     fun generators(): List<ImageGenerator> = generators
 
     fun byMethod(method: ImageMethod): ImageGenerator =
         generators.firstOrNull { it.method == method } ?: generators.first()
+
+    /** Releases native ONNX sessions if they were loaded. */
+    fun close() = onnx.close()
 
     /** Backwards-compatible convenience for the procedural preview. */
     suspend fun render(prompt: String, seed: Long? = null): Bitmap =

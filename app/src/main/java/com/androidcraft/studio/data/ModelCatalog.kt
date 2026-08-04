@@ -97,6 +97,24 @@ object ModelCatalog {
             quantization = "fp16",
         ),
         ModelSpec(
+            id = "sd15-onnx",
+            displayName = "Stable Diffusion 1.5 (ONNX)",
+            publisher = "ONNX Runtime bundle",
+            modality = Modality.IMAGE,
+            runtime = Runtime.DIFFUSION,
+            description = "ONNX export of Stable Diffusion 1.5 (text encoder + UNet + VAE + " +
+                "tokenizer) for the ONNX Runtime engine. Downloaded as a .zip and extracted " +
+                "on-device. Large & experimental; if the link is unavailable, host your own " +
+                "Optimum ONNX export as sd15-onnx.zip.",
+            downloadUrl = "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/onnx.zip",
+            fileName = "sd15-onnx.zip",
+            approxBytes = 3400L * MB,
+            minRamBytes = 6L * GB,
+            quantization = "fp32",
+            archive = true,
+            extractDir = "sd15-onnx",
+        ),
+        ModelSpec(
             id = "procedural-image",
             displayName = "Procedural Preview Renderer",
             publisher = "AndroidCraft",

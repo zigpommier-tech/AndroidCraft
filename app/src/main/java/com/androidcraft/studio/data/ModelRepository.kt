@@ -47,8 +47,13 @@ class ModelRepository(
 
     fun fileFor(spec: ModelSpec): File = File(modelsDir, spec.fileName)
 
-    fun isReady(spec: ModelSpec): Boolean =
-        spec.isBundled || (spec.fileName.isNotEmpty() && fileFor(spec).exists() && fileFor(spec).length() > 0)
+    fun extractDirFor(spec: ModelSpec): File = File(modelsDir, spec.extractDir)
+
+    fun isReady(spec: ModelSpec): Boolean = when {
+        spec.isBundled -> true
+        spec.archive -> extractDirFor(spec).let { it.isDirectory && (it.list()?.isNotEmpty() == true) }
+        else -> spec.fileName.isNotEmpty() && fileFor(spec).exists() && fileFor(spec).length() > 0
+    }
 
     fun stateFor(id: String): DownloadState = _states.value[id] ?: DownloadState.NotDownloaded
 
@@ -76,6 +81,10 @@ class ModelRepository(
                     val effectiveTotal = if (total > 0) total else spec.approxBytes
                     setState(spec.id, DownloadState.Downloading(downloaded, effectiveTotal))
                 }
+                if (spec.archive) {
+                    extractZip(fileFor(spec), extractDirFor(spec))
+                    fileFor(spec).delete()
+                }
                 setState(spec.id, DownloadState.Ready)
             } catch (t: Throwable) {
                 if (t is kotlinx.coroutines.CancellationException) {
@@ -100,7 +109,32 @@ class ModelRepository(
         if (spec.isBundled) return
         cancelDownload(spec)
         fileFor(spec).delete()
+        if (spec.archive) extractDirFor(spec).deleteRecursively()
         setState(spec.id, DownloadState.NotDownloaded)
+    }
+
+    private fun extractZip(zip: File, destDir: File) {
+        destDir.mkdirs()
+        val destCanonical = destDir.canonicalPath
+        java.util.zip.ZipInputStream(zip.inputStream().buffered()).use { zis ->
+            var entry = zis.nextEntry
+            while (entry != null) {
+                val outFile = File(destDir, entry.name)
+                // Guard against zip path traversal.
+                if (!outFile.canonicalPath.startsWith(destCanonical)) {
+                    entry = zis.nextEntry
+                    continue
+                }
+                if (entry.isDirectory) {
+                    outFile.mkdirs()
+                } else {
+                    outFile.parentFile?.mkdirs()
+                    outFile.outputStream().use { zis.copyTo(it) }
+                }
+                zis.closeEntry()
+                entry = zis.nextEntry
+            }
+        }
     }
 
     // ---- Custom (user-added) models ----

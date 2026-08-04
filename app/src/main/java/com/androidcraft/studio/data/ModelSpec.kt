@@ -43,6 +43,9 @@ data class ModelSpec(
     val quantization: String = "",
     val gated: Boolean = false,
     val custom: Boolean = false,
+    /** When true, the downloaded file is a .zip extracted into [extractDir] under the models dir. */
+    val archive: Boolean = false,
+    val extractDir: String = "",
 ) {
     val isBundled: Boolean get() = downloadUrl == null
 

@@ -9,6 +9,7 @@ navigationCompose = "2.8.4"
 coroutines = "1.9.0"
 okhttp = "4.12.0"
 mediapipeGenai = "0.10.24"
+onnxruntime = "1.20.0"
 junit = "4.13.2"
 
 [libraries]
@@ -28,6 +29,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeGenai" }
+onnxruntime-android = { group = "com.microsoft.onnxruntime", name = "onnxruntime-android", version.ref = "onnxruntime" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
