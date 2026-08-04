@@ -13,7 +13,7 @@ class AppContainer(context: Context) {
     val modelRepository = ModelRepository.get(context)
     val textEngine = TextEngine(context.applicationContext)
     val audioEngine = AudioEngine(context.applicationContext)
-    val imageEngine = ImageEngine()
+    val imageEngine = ImageEngine(context)
     val videoEngine = VideoEngine()
 }
 

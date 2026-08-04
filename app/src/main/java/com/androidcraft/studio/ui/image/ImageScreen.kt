@@ -18,10 +18,14 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,10 +44,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.androidcraft.studio.core.MediaSaver
 import com.androidcraft.studio.ui.components.SectionCard
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    LaunchedEffect(Unit) { viewModel.refreshMethods() }
 
     LaunchedEffect(state.shareUri) {
         state.shareUri?.let { uri ->
@@ -53,6 +60,9 @@ fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
             viewModel.onShareConsumed()
         }
     }
+
+    val selectedInfo = state.methods.firstOrNull { it.method == state.selected }
+    val diffusion = state.selected.diffusion
 
     Column(
         modifier = Modifier
@@ -67,10 +77,28 @@ fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
             fontWeight = FontWeight.Bold,
         )
         Text(
-            "Runs on-device with the bundled renderer — no download required.",
+            "Choose a generation method — all run fully on-device.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+
+        // ---- Method selector ----
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            state.methods.forEach { info ->
+                FilterChip(
+                    selected = state.selected == info.method,
+                    onClick = { viewModel.selectMethod(info.method) },
+                    label = { Text(info.method.displayName) },
+                )
+            }
+        }
+        selectedInfo?.let {
+            Text(
+                it.hint,
+                style = MaterialTheme.typography.labelSmall,
+                color = if (it.available) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error,
+            )
+        }
 
         Surface(
             shape = RoundedCornerShape(24.dp),
@@ -81,13 +109,22 @@ fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
                 val bmp = state.bitmap
                 when {
                     state.isGenerating -> {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(24.dp),
+                        ) {
                             CircularProgressIndicator()
                             Text(
-                                "Rendering…",
+                                if (diffusion) "Diffusing… ${(state.progress * 100).toInt()}%" else "Rendering…",
                                 modifier = Modifier.padding(top = 12.dp),
                                 style = MaterialTheme.typography.bodySmall,
                             )
+                            if (diffusion) {
+                                LinearProgressIndicator(
+                                    progress = { state.progress },
+                                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                )
+                            }
                         }
                     }
 
@@ -121,16 +158,32 @@ fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
             minLines = 2,
         )
 
+        if (diffusion) {
+            SectionCard {
+                Text("Sampling steps  ${state.steps}", style = MaterialTheme.typography.labelLarge)
+                Slider(
+                    value = state.steps.toFloat(),
+                    onValueChange = { viewModel.onStepsChange(it.toInt()) },
+                    valueRange = 4f..40f,
+                )
+                Text(
+                    "More steps = higher quality, slower. On-device diffusion is CPU-bound.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Button(
-                onClick = viewModel::generate,
+                onClick = { viewModel.generate() },
                 enabled = state.prompt.isNotBlank() && !state.isGenerating,
                 modifier = Modifier.weight(1f),
             ) {
                 Text("Generate")
             }
             OutlinedButton(
-                onClick = viewModel::regenerateVariation,
+                onClick = { viewModel.generate(newSeed = true) },
                 enabled = state.prompt.isNotBlank() && !state.isGenerating,
             ) {
                 Icon(Icons.Filled.Casino, contentDescription = "Variation")
@@ -157,10 +210,11 @@ fun ImageScreen(viewModel: ImageViewModel = viewModel()) {
         }
 
         SectionCard {
-            Text("Upgrade path", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text("On-device engines", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             Text(
-                "The renderer is a drop-in stand-in. Add Stable Diffusion LiteRT weights and point " +
-                    "the image engine at them to produce photoreal results from the same prompt box.",
+                "Procedural is instant and always available. The diffusion engines (stable-diffusion.cpp " +
+                    "and ONNX Runtime) produce real text-to-image results from a model you download in the " +
+                    "Models tab, and run fully offline on the device.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
