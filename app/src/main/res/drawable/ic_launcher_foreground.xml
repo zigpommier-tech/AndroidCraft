@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Stylized "spark" glyph representing generative AI. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L60,48 L80,54 L60,60 L54,80 L48,60 L28,54 L48,48 Z" />
+    <path
+        android:fillColor="#E6E0FF"
+        android:pathData="M74,30 L77,39 L86,42 L77,45 L74,54 L71,45 L62,42 L71,39 Z" />
+    <path
+        android:fillColor="#E6E0FF"
+        android:pathData="M36,62 L38,69 L45,71 L38,73 L36,80 L34,73 L27,71 L34,69 Z" />
+</vector>

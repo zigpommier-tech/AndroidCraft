@@ -1,0 +1,81 @@
+name: Release APK
+
+# Cut a GitHub Release with an installable APK when a version tag is pushed.
+#   git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK packages
+        run: |
+          sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools" > /dev/null
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build release + debug APKs
+        run: ./gradlew assembleRelease assembleDebug --stacktrace
+
+      # Sign the release APK only if signing secrets are configured; otherwise the
+      # debug-signed APK below is still a fully installable artifact.
+      - name: Sign release APK
+        id: sign
+        if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 -d > keystore.jks
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort | tail -1)
+          UNSIGNED=app/build/outputs/apk/release/app-release-unsigned.apk
+          SIGNED=app/build/outputs/apk/release/androidcraft-release.apk
+          "$BT/apksigner" sign \
+            --ks keystore.jks \
+            --ks-pass pass:"$KEYSTORE_PASSWORD" \
+            --ks-key-alias "$KEY_ALIAS" \
+            --key-pass pass:"$KEY_PASSWORD" \
+            --out "$SIGNED" "$UNSIGNED"
+          rm -f keystore.jks
+          echo "signed_apk=$SIGNED" >> "$GITHUB_OUTPUT"
+
+      - name: Collect APKs
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/*.apk dist/ 2>/dev/null || true
+          cp app/build/outputs/apk/release/*.apk dist/ 2>/dev/null || true
+          ls -la dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.apk
+          generate_release_notes: true
+          fail_on_unmatched_files: true
