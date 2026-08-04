@@ -14,10 +14,14 @@ download and manage yourself. Every APK is built in CI, never on a device or lap
 | Tab | Capability | Engine |
 | --- | --- | --- |
 | **Chat** | Fully offline LLM chat | Google AI Edge / MediaPipe GenAI (LiteRT `.task`) |
-| **Image** | Text-to-image | Bundled on-device procedural renderer (diffusion-ready) |
+| **Image** | Text-to-image, **selectable engine** | Procedural (instant) **or real diffusion via stable-diffusion.cpp** |
 | **Voice** | Text-to-speech to a WAV file | Android on-device neural TTS |
-| **Video** | Prompt-seeded motion clip | Experimental on-device frame renderer |
-| **Models** | Download / delete models, device-fit checks, HF token | Download manager + `ModelRepository` |
+| **Video** | Prompt-seeded motion clip → **MP4** | On-device frame renderer + MediaCodec encoder |
+| **Models** | Download / delete, device-fit checks, **add any model by URL** | Download manager + `ModelRepository` |
+
+Every generated image, voice clip, and video can be **saved to the gallery/Music/Movies
+and shared**. Model downloads need **no login** by default (an optional Hugging Face token
+covers gated repos).
 
 Everything runs on the device. Nothing is sent to a server for inference.
 
@@ -54,12 +58,21 @@ Some text models are **gated** on Hugging Face. Paste a read token on the **Mode
 screen (stored only on-device) to enable those downloads. You can also change or extend
 the catalog by editing `ModelCatalog.kt` — any direct-download URL works.
 
-### Making image generation photoreal
+### Image generation engines
 
-`ImageEngine.render()` is a deterministic procedural stand-in with the same signature a
-real diffusion call would have. To enable photoreal output, drop in Stable Diffusion
-LiteRT weights and replace the body of `render()` with a MediaPipe/LiteRT image-generation
-call — the UI, prompt box, and gallery save all keep working unchanged.
+The Image tab has a **method selector**:
+
+- **Procedural** — instant, no download, abstract art (always available).
+- **Diffusion · SD.cpp** — real Stable Diffusion running fully on-device via a native
+  [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) library (arm64,
+  compiled in CI). Download a Stable Diffusion `.safetensors`/`.gguf` model in the Models
+  tab (or add your own quantized GGUF by URL), then generate offline. CPU-bound, so expect
+  tens of seconds per image on a flagship; a smaller quantized model is faster.
+- **Diffusion · ONNX** — a second diffusion backend slot (see roadmap).
+
+The native engine lives in `app/src/main/cpp` (`sdjni.cpp` JNI bridge + the
+`stable-diffusion.cpp` submodule); the whole pipeline — tokenizer, scheduler, UNet, VAE —
+runs in C++.
 
 ## Building
 
@@ -68,10 +81,14 @@ call — the UI, prompt box, and gallery save all keep working unchanged.
 Pushing a commit that touches the app or its build config triggers
 [`.github/workflows/android-build.yml`](.github/workflows/android-build.yml), which:
 
-1. sets up JDK 17 + the Android SDK (platform 35, build-tools 35),
-2. runs the unit tests,
-3. assembles the **debug APK**, and
-4. uploads it as the `androidcraft-debug-apk` build artifact.
+1. initialises the native submodules (`stable-diffusion.cpp` + `ggml`),
+2. sets up JDK 17 + the Android SDK (platform 35, build-tools 35, **NDK 27 + CMake**),
+3. runs the unit tests,
+4. compiles the native diffusion library and assembles the **debug APK**, and
+5. uploads it as the `androidcraft-debug-apk` build artifact.
+
+> Cloning the repo for local builds needs `git clone --recurse-submodules` (or
+> `git submodule update --init` after cloning) so the native sources are present.
 
 Tagging a release (`git tag v0.1.0 && git push origin v0.1.0`) runs
 [`.github/workflows/release.yml`](.github/workflows/release.yml), which builds the APKs and
@@ -107,6 +124,8 @@ compileSdk 35 / minSdk 26.
 ## Roadmap
 
 - Streaming token output for chat (MediaPipe async session API).
-- Real on-device diffusion for the Image tab.
-- MP4 export for the Video tab via `MediaCodec` / `MediaMuxer`.
+- Second diffusion backend: ONNX Runtime SD 1.5 pipeline behind the existing selector.
 - `llama.cpp` GGUF engine as an alternate text backend for broader model support.
+
+Done: real on-device diffusion (stable-diffusion.cpp), MP4 video export, save/share for
+all media, add-model-by-URL, optional (not required) Hugging Face token.
