@@ -39,7 +39,7 @@ class ChatViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshModels() {
-        val ready = ModelCatalog.forModality(Modality.TEXT)
+        val ready = repo.modelsFor(Modality.TEXT)
             .filter { repo.states.value[it.id] is DownloadState.Ready || repo.isReady(it) }
         _state.update { current ->
             current.copy(

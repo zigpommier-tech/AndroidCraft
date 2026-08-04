@@ -2,9 +2,12 @@ package com.androidcraft.studio.ui.video
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.androidcraft.studio.AndroidCraftApp
+import com.androidcraft.studio.core.MediaSaver
+import com.androidcraft.studio.engine.VideoEncoder
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
 
 data class VideoUiState(
     val prompt: String = "",
@@ -23,6 +27,9 @@ data class VideoUiState(
     val isPlaying: Boolean = false,
     val fps: Int = 12,
     val error: String? = null,
+    val isExporting: Boolean = false,
+    val statusMessage: String? = null,
+    val shareUri: Uri? = null,
 )
 
 class VideoViewModel(app: Application) : AndroidViewModel(app) {
@@ -83,6 +90,51 @@ class VideoViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    private suspend fun exportToFile(): Uri? {
+        val frames = _state.value.frames
+        if (frames.isEmpty()) return null
+        val app = getApplication<Application>()
+        val out = File(app.cacheDir, "androidcraft_clip.mp4")
+        VideoEncoder.encodeMp4(frames, _state.value.fps, out)
+        return MediaSaver.saveVideo(app, out, "androidcraft_${System.currentTimeMillis()}.mp4")
+    }
+
+    fun save() {
+        if (_state.value.frames.isEmpty() || _state.value.isExporting) return
+        _state.update { it.copy(isExporting = true, statusMessage = null, error = null) }
+        viewModelScope.launch {
+            try {
+                val uri = exportToFile()
+                _state.update {
+                    it.copy(
+                        isExporting = false,
+                        statusMessage = if (uri != null) "Saved to Movies" else "Export failed",
+                    )
+                }
+            } catch (t: Throwable) {
+                _state.update { it.copy(isExporting = false, error = "Export failed: ${t.message}") }
+            }
+        }
+    }
+
+    fun share() {
+        if (_state.value.frames.isEmpty() || _state.value.isExporting) return
+        _state.update { it.copy(isExporting = true, statusMessage = null, error = null) }
+        viewModelScope.launch {
+            try {
+                val uri = exportToFile()
+                _state.update {
+                    if (uri != null) it.copy(isExporting = false, shareUri = uri)
+                    else it.copy(isExporting = false, statusMessage = "Export failed")
+                }
+            } catch (t: Throwable) {
+                _state.update { it.copy(isExporting = false, error = "Export failed: ${t.message}") }
+            }
+        }
+    }
+
+    fun onShareConsumed() = _state.update { it.copy(shareUri = null) }
 
     override fun onCleared() {
         playbackJob?.cancel()

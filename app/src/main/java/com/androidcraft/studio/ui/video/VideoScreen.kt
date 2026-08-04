@@ -13,8 +13,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -24,21 +26,34 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.androidcraft.studio.core.MediaSaver
 import com.androidcraft.studio.ui.components.SectionCard
 
 @Composable
 fun VideoScreen(viewModel: VideoViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(state.shareUri) {
+        state.shareUri?.let { uri ->
+            context.startActivity(
+                android.content.Intent.createChooser(MediaSaver.shareIntent(uri, "video/mp4"), "Share clip"),
+            )
+            viewModel.onShareConsumed()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -140,8 +155,30 @@ fun VideoScreen(viewModel: VideoViewModel = viewModel()) {
                     contentDescription = "Play/Pause",
                 )
             }
+            OutlinedButton(
+                onClick = viewModel::save,
+                enabled = state.frames.isNotEmpty() && !state.isGenerating && !state.isExporting,
+            ) {
+                Icon(Icons.Filled.Download, contentDescription = "Save MP4")
+            }
+            OutlinedButton(
+                onClick = viewModel::share,
+                enabled = state.frames.isNotEmpty() && !state.isGenerating && !state.isExporting,
+            ) {
+                Icon(Icons.Filled.Share, contentDescription = "Share")
+            }
         }
 
+        if (state.isExporting) {
+            Text(
+                "Encoding MP4…",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        state.statusMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+        }
         state.error?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }

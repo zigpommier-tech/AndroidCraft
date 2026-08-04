@@ -10,9 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,18 +29,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.androidcraft.studio.core.MediaSaver
 import com.androidcraft.studio.ui.components.SectionCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AudioScreen(viewModel: AudioViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) { viewModel.loadVoices() }
+
+    LaunchedEffect(state.shareUri) {
+        state.shareUri?.let { uri ->
+            context.startActivity(
+                android.content.Intent.createChooser(MediaSaver.shareIntent(uri, "audio/x-wav"), "Share audio"),
+            )
+            viewModel.onShareConsumed()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -118,8 +132,17 @@ fun AudioScreen(viewModel: AudioViewModel = viewModel()) {
                     contentDescription = "Play",
                 )
             }
+            OutlinedButton(onClick = viewModel::save, enabled = state.hasAudio) {
+                Icon(Icons.Filled.Download, contentDescription = "Save")
+            }
+            OutlinedButton(onClick = viewModel::share, enabled = state.hasAudio) {
+                Icon(Icons.Filled.Share, contentDescription = "Share")
+            }
         }
 
+        state.statusMessage?.let {
+            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.secondary)
+        }
         state.error?.let {
             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         }

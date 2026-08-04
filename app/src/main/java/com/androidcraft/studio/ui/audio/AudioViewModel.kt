@@ -2,9 +2,11 @@ package com.androidcraft.studio.ui.audio
 
 import android.app.Application
 import android.media.MediaPlayer
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.androidcraft.studio.AndroidCraftApp
+import com.androidcraft.studio.core.MediaSaver
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,6 +24,8 @@ data class AudioUiState(
     val speed: Float = 1.0f,
     val pitch: Float = 1.0f,
     val error: String? = null,
+    val statusMessage: String? = null,
+    val shareUri: Uri? = null,
 )
 
 class AudioViewModel(app: Application) : AndroidViewModel(app) {
@@ -103,6 +107,36 @@ class AudioViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(error = "Playback failed: ${t.message}") }
         }
     }
+
+    private suspend fun export(): Uri? {
+        val file = lastFile ?: return null
+        return MediaSaver.saveAudio(
+            getApplication(),
+            file,
+            "androidcraft_${System.currentTimeMillis()}.wav",
+        )
+    }
+
+    fun save() {
+        if (lastFile == null) return
+        viewModelScope.launch {
+            val uri = export()
+            _state.update {
+                it.copy(statusMessage = if (uri != null) "Saved to Music" else "Save failed")
+            }
+        }
+    }
+
+    fun share() {
+        if (lastFile == null) return
+        viewModelScope.launch {
+            val uri = export()
+            if (uri != null) _state.update { it.copy(shareUri = uri) }
+            else _state.update { it.copy(statusMessage = "Save failed") }
+        }
+    }
+
+    fun onShareConsumed() = _state.update { it.copy(shareUri = null) }
 
     override fun onCleared() {
         player?.release()

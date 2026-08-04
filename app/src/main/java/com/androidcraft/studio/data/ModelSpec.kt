@@ -42,6 +42,7 @@ data class ModelSpec(
     val minRamBytes: Long,
     val quantization: String = "",
     val gated: Boolean = false,
+    val custom: Boolean = false,
 ) {
     val isBundled: Boolean get() = downloadUrl == null
 

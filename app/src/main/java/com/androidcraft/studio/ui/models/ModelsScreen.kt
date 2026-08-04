@@ -9,10 +9,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -23,8 +25,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,6 +52,19 @@ import com.androidcraft.studio.ui.theme.CraftSuccess
 fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
     val states by viewModel.downloadStates.collectAsStateWithLifecycle()
     val token by viewModel.hfToken.collectAsStateWithLifecycle()
+    val grouped by viewModel.grouped.collectAsStateWithLifecycle()
+
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    if (showAddDialog) {
+        AddModelDialog(
+            onDismiss = { showAddDialog = false },
+            onConfirm = { name, url ->
+                viewModel.addCustomModel(name, url, Modality.TEXT)
+                showAddDialog = false
+            },
+        )
+    }
 
     LazyColumn(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -53,11 +72,21 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp),
     ) {
         item {
-            Text(
-                "Models",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Models",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+                OutlinedButton(onClick = { showAddDialog = true }) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Text("  Add by URL")
+                }
+            }
         }
 
         item { DeviceCard(viewModel.deviceCapabilities) }
@@ -66,7 +95,9 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
             SectionCard {
                 Text("Hugging Face token", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Some models are gated. Paste a read token to enable their download. Stored only on this device.",
+                    "Optional. Most models download with no token. A read token is only needed for " +
+                        "license-gated repositories. Stored only on this device and sent solely to the " +
+                        "model host when downloading.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 6.dp),
@@ -82,7 +113,7 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
             }
         }
 
-        viewModel.grouped.forEach { (modality, specs) ->
+        grouped.forEach { (modality, specs) ->
             item {
                 Text(
                     modality.label,
@@ -104,6 +135,51 @@ fun ModelsScreen(viewModel: ModelsViewModel = viewModel()) {
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddModelDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, url: String) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add a text model") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Paste a direct link to a LiteRT .task chat model (e.g. a Hugging Face " +
+                        "resolve URL). It downloads and runs fully on-device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Model URL (.task)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(name.ifBlank { "Custom model" }, url) },
+                enabled = url.isNotBlank(),
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

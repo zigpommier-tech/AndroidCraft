@@ -2,6 +2,7 @@ package com.androidcraft.studio.ui.image
 
 import android.app.Application
 import android.graphics.Bitmap
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.androidcraft.studio.AndroidCraftApp
@@ -18,6 +19,7 @@ data class ImageUiState(
     val bitmap: Bitmap? = null,
     val statusMessage: String? = null,
     val error: String? = null,
+    val shareUri: Uri? = null,
 )
 
 class ImageViewModel(app: Application) : AndroidViewModel(app) {
@@ -58,17 +60,36 @@ class ImageViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    private suspend fun export(): Uri? {
+        val bmp = _state.value.bitmap ?: return null
+        return MediaSaver.saveImage(
+            getApplication(),
+            bmp,
+            "androidcraft_${System.currentTimeMillis()}.png",
+        )
+    }
+
     fun save() {
-        val bmp = _state.value.bitmap ?: return
+        if (_state.value.bitmap == null) return
         viewModelScope.launch {
-            val uri = MediaSaver.saveImage(
-                getApplication(),
-                bmp,
-                "androidcraft_${System.currentTimeMillis()}.png",
-            )
+            val uri = export()
             _state.update {
                 it.copy(statusMessage = if (uri != null) "Saved to gallery" else "Save failed")
             }
         }
     }
+
+    fun share() {
+        if (_state.value.bitmap == null) return
+        viewModelScope.launch {
+            val uri = export()
+            if (uri != null) {
+                _state.update { it.copy(shareUri = uri) }
+            } else {
+                _state.update { it.copy(statusMessage = "Save failed") }
+            }
+        }
+    }
+
+    fun onShareConsumed() = _state.update { it.copy(shareUri = null) }
 }
