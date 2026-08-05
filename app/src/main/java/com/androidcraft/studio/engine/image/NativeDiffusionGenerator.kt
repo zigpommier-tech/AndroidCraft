@@ -19,9 +19,9 @@ class NativeDiffusionGenerator(private val modelsDir: File) : ImageGenerator {
 
     override val method = ImageMethod.NATIVE
 
-    private fun modelFile(): File? = modelsDir.listFiles()?.firstOrNull { f ->
-        f.isFile && (f.name.endsWith(".gguf", true) || f.name.endsWith(".safetensors", true))
-    }
+    private fun modelFile(): File? = modelsDir.listFiles()
+        ?.filter { f -> f.isFile && (f.name.endsWith(".gguf", true) || f.name.endsWith(".safetensors", true)) }
+        ?.maxByOrNull { it.lastModified() }
 
     override fun status(): GeneratorStatus = when {
         !libAvailable -> GeneratorStatus(

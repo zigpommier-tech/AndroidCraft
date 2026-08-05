@@ -47,16 +47,17 @@ com.androidcraft.studio
 
 ## Models
 
-The catalog (`ModelCatalog.kt`) ships curated on-device models:
+Everything is **one-tap from inside the app** — no account, no token, no links to find,
+and no manual URL entry. The catalog (`ModelCatalog.kt`) ships only vetted, **ungated,
+direct-download** models, and the **Models** screen sorts them by how well they fit your
+phone's RAM and badges the best pick with **"Best for your device."**
 
-- **Text:** Gemma 3 1B Instruct (int4 / int8) and Hammer 2.1 1.5B — LiteRT `.task`
-  bundles the MediaPipe GenAI runtime executes directly.
+- **Text (chat):** Gemma 3 1B (int4) and Qwen 2.5 1.5B (int8) — LiteRT `.task` bundles the
+  MediaPipe GenAI runtime executes directly (the same models Google's AI Edge Gallery ships).
+- **Image:** Stable Diffusion 1.5 as single-file **GGUF** weights (Q8) for the native
+  diffusion engine.
 - **Voice:** the system TTS engine (no download).
-- **Image / Video:** bundled renderers (no download).
-
-Some text models are **gated** on Hugging Face. Paste a read token on the **Models**
-screen (stored only on-device) to enable those downloads. You can also change or extend
-the catalog by editing `ModelCatalog.kt` — any direct-download URL works.
+- **Image/Video previews:** bundled procedural renderers (no download).
 
 ### Image generation engines
 
@@ -65,10 +66,10 @@ The Image tab has a **method selector**:
 - **Procedural** — instant, no download, abstract art (always available).
 - **Diffusion · SD.cpp** — real Stable Diffusion running fully on-device via a native
   [stable-diffusion.cpp](https://github.com/leejet/stable-diffusion.cpp) library (arm64,
-  compiled in CI). Download a Stable Diffusion `.safetensors`/`.gguf` model in the Models
-  tab (or add your own quantized GGUF by URL), then generate offline. CPU-bound, so expect
-  tens of seconds per image on a flagship; a smaller quantized model is faster.
-- **Diffusion · ONNX** — a second diffusion backend slot (see roadmap).
+  compiled in CI). One-tap download a Stable Diffusion GGUF model from the Models tab, then
+  generate offline. CPU-bound, so expect tens of seconds per image on a flagship.
+- **Diffusion · ONNX** — a second diffusion backend (ONNX Runtime, full SD 1.5 pipeline). Only
+  shown when an ONNX bundle is present, so the picker stays limited to engines you can use now.
 
 The native engine lives in `app/src/main/cpp` (`sdjni.cpp` JNI bridge + the
 `stable-diffusion.cpp` submodule); the whole pipeline — tokenizer, scheduler, UNet, VAE —

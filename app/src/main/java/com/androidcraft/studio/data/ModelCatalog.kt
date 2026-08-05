@@ -4,63 +4,47 @@ private const val GB = 1024L * 1024L * 1024L
 private const val MB = 1024L * 1024L
 
 /**
- * Curated catalog of models that run fully on-device.
+ * Curated catalog of models that run fully on-device and download directly in the app — no
+ * external links, no account, and no Hugging Face token required. Every entry is a vetted,
+ * ungated, single-file (or bundled) model, and the Models screen matches them to the device's RAM.
  *
- * Text models are LiteRT `.task` bundles that the MediaPipe GenAI runtime executes directly.
- * Some are gated on Hugging Face and require a personal access token (set it on the Models
- * screen); the download manager sends it as a bearer token when present.
+ * Text models are LiteRT `.task` bundles run by MediaPipe GenAI (the same ones Google's AI Edge
+ * Gallery ships). Image models are single-file GGUF weights run by the native stable-diffusion.cpp
+ * engine. All URLs resolve without authentication.
  */
 object ModelCatalog {
 
     val models: List<ModelSpec> = listOf(
-        // ---- Text / Chat (MediaPipe GenAI, LiteRT .task) ----
+        // ---- Text / Chat (MediaPipe GenAI, LiteRT .task, ungated) ----
         ModelSpec(
             id = "gemma3-1b-it-q4",
-            displayName = "Gemma 3 1B Instruct",
+            displayName = "Gemma 3 1B",
             publisher = "Google · litert-community",
             modality = Modality.TEXT,
             runtime = Runtime.MEDIAPIPE_LLM,
-            description = "Compact instruction-tuned chat model. Great default for phones; " +
-                "fast, low memory, fully offline once downloaded.",
+            description = "Compact, fast chat model — the best default for phones. Low memory, " +
+                "fully offline once downloaded. No account needed.",
             downloadUrl = "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/" +
                 "Gemma3-1B-IT_multi-prefill-seq_q4_ekv2048.task",
             fileName = "gemma3-1b-it-q4.task",
             approxBytes = 555L * MB,
             minRamBytes = 3L * GB,
             quantization = "int4",
-            gated = true,
         ),
         ModelSpec(
-            id = "hammer-2p1-1p5b",
-            displayName = "Hammer 2.1 (1.5B)",
-            publisher = "litert-community",
+            id = "qwen25-1p5b-q8",
+            displayName = "Qwen 2.5 1.5B",
+            publisher = "Alibaba · litert-community",
             modality = Modality.TEXT,
             runtime = Runtime.MEDIAPIPE_LLM,
-            description = "Function-calling / agentic small model in LiteRT format. " +
-                "Good for structured, tool-style responses on device.",
-            downloadUrl = "https://huggingface.co/litert-community/Hammer2.1-1.5b/resolve/main/" +
-                "Hammer2.1-1.5b_seq128_q8_ekv1280.task",
-            fileName = "hammer-2p1-1p5b-q8.task",
+            description = "Higher-quality instruction-tuned chat model. Great on flagship phones " +
+                "with 6 GB+ RAM. Fully offline, no account needed.",
+            downloadUrl = "https://huggingface.co/litert-community/Qwen2.5-1.5B-Instruct/resolve/" +
+                "main/Qwen2.5-1.5B-Instruct_multi-prefill-seq_q8_ekv1280.task",
+            fileName = "qwen25-1p5b-q8.task",
             approxBytes = 1600L * MB,
             minRamBytes = 4L * GB,
             quantization = "int8",
-            gated = false,
-        ),
-        ModelSpec(
-            id = "gemma3-1b-it-q8",
-            displayName = "Gemma 3 1B Instruct (int8)",
-            publisher = "Google · litert-community",
-            modality = Modality.TEXT,
-            runtime = Runtime.MEDIAPIPE_LLM,
-            description = "Higher-quality int8 build of Gemma 3 1B. Needs a bit more RAM " +
-                "than the int4 variant; strong quality on flagship devices.",
-            downloadUrl = "https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/" +
-                "Gemma3-1B-IT_multi-prefill-seq_q8_ekv2048.task",
-            fileName = "gemma3-1b-it-q8.task",
-            approxBytes = 1050L * MB,
-            minRamBytes = 4L * GB,
-            quantization = "int8",
-            gated = true,
         ),
 
         // ---- Audio / Voice ----
@@ -71,48 +55,43 @@ object ModelCatalog {
             modality = Modality.AUDIO,
             runtime = Runtime.ANDROID_TTS,
             description = "Uses the on-device text-to-speech engine already installed on your " +
-                "phone (Samsung/Google). No download needed — synthesizes speech to a WAV file.",
+                "phone. No download needed — synthesizes speech to a WAV file.",
             downloadUrl = null,
             fileName = "",
             approxBytes = 0,
             minRamBytes = 0,
         ),
 
-        // ---- Image ----
+        // ---- Image (native stable-diffusion.cpp, single-file GGUF, ungated) ----
         ModelSpec(
-            id = "sd15-diffusion",
-            displayName = "Stable Diffusion 1.5",
-            publisher = "Runwayml · single-file",
+            id = "sd15-q8-emaonly",
+            displayName = "Stable Diffusion 1.5 (Q8)",
+            publisher = "second-state · GGUF",
             modality = Modality.IMAGE,
             runtime = Runtime.DIFFUSION,
-            description = "Full Stable Diffusion 1.5 weights for the on-device diffusion engine " +
-                "(stable-diffusion.cpp). Real text-to-image, fully offline. Large download; " +
-                "generation is CPU-bound so expect tens of seconds per image on a flagship. " +
-                "You can also add a smaller quantized GGUF via ‘Add by URL’.",
-            downloadUrl = "https://huggingface.co/stable-diffusion-v1-5/stable-diffusion-v1-5/" +
-                "resolve/main/v1-5-pruned-emaonly.safetensors",
-            fileName = "sd15.safetensors",
-            approxBytes = 4265L * MB,
-            minRamBytes = 6L * GB,
-            quantization = "fp16",
+            description = "Real text-to-image, fully offline via the on-device diffusion engine. " +
+                "Q8 quantized single file — best quality/size balance. One-tap download.",
+            downloadUrl = "https://huggingface.co/second-state/stable-diffusion-v1-5-GGUF/resolve/" +
+                "main/stable-diffusion-v1-5-pruned-emaonly-Q8_0.gguf",
+            fileName = "sd15-q8-emaonly.gguf",
+            approxBytes = 1700L * MB,
+            minRamBytes = 4L * GB,
+            quantization = "Q8_0",
         ),
         ModelSpec(
-            id = "sd15-onnx",
-            displayName = "Stable Diffusion 1.5 (ONNX)",
-            publisher = "ONNX Runtime bundle",
+            id = "sd15-q8-full",
+            displayName = "Stable Diffusion 1.5 (Q8, full)",
+            publisher = "kostakoff · GGUF",
             modality = Modality.IMAGE,
             runtime = Runtime.DIFFUSION,
-            description = "ONNX export of Stable Diffusion 1.5 (text encoder + UNet + VAE + " +
-                "tokenizer) for the ONNX Runtime engine. Downloaded as a .zip and extracted " +
-                "on-device. Large & experimental; if the link is unavailable, host your own " +
-                "Optimum ONNX export as sd15-onnx.zip.",
-            downloadUrl = "https://huggingface.co/runwayml/stable-diffusion-v1-5/resolve/main/onnx.zip",
-            fileName = "sd15-onnx.zip",
-            approxBytes = 3400L * MB,
-            minRamBytes = 6L * GB,
-            quantization = "fp32",
-            archive = true,
-            extractDir = "sd15-onnx",
+            description = "Full (non-EMA) Q8 Stable Diffusion 1.5 for the on-device diffusion " +
+                "engine. Slightly larger; alternative to the EMA build. One-tap download.",
+            downloadUrl = "https://huggingface.co/kostakoff/stable-diffusion-v1-5-GGUF/resolve/" +
+                "main/v1-5-pruned_Q8_0.gguf",
+            fileName = "sd15-q8-full.gguf",
+            approxBytes = 2000L * MB,
+            minRamBytes = 5L * GB,
+            quantization = "Q8_0",
         ),
         ModelSpec(
             id = "procedural-image",
@@ -120,9 +99,8 @@ object ModelCatalog {
             publisher = "AndroidCraft",
             modality = Modality.IMAGE,
             runtime = Runtime.BUILTIN,
-            description = "Bundled deterministic renderer that turns a prompt into abstract " +
-                "art on-device with zero download. Placeholder for a full diffusion pipeline " +
-                "(drop in Stable Diffusion LiteRT weights to enable photoreal generation).",
+            description = "Bundled deterministic renderer that turns a prompt into abstract art " +
+                "on-device with zero download — instant, always available.",
             downloadUrl = null,
             fileName = "",
             approxBytes = 0,
@@ -136,9 +114,9 @@ object ModelCatalog {
             publisher = "AndroidCraft",
             modality = Modality.VIDEO,
             runtime = Runtime.BUILTIN,
-            description = "Generates an animated, prompt-seeded motion clip on-device as a " +
-                "preview of the video pipeline. True on-device text-to-video is not yet " +
-                "practical on mobile hardware; this scaffolds the flow.",
+            description = "Generates an animated, prompt-seeded motion clip on-device and exports " +
+                "a real MP4. True on-device text-to-video isn't practical on phones yet; this " +
+                "scaffolds the flow.",
             downloadUrl = null,
             fileName = "",
             approxBytes = 0,

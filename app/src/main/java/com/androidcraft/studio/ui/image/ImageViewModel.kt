@@ -41,11 +41,21 @@ class ImageViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun refreshMethods() {
-        val methods = engine.generators().map { gen ->
-            val status = gen.status()
-            ImageMethodInfo(gen.method, status.available, status.hint)
+        val methods = engine.generators()
+            .map { gen ->
+                val status = gen.status()
+                ImageMethodInfo(gen.method, status.available, status.hint)
+            }
+            // Only surface the ONNX backend once a bundle is actually present, to keep the
+            // picker to engines the user can use right now.
+            .filter { it.method != ImageMethod.ONNX || it.available }
+        _state.update { current ->
+            val stillValid = methods.any { it.method == current.selected }
+            current.copy(
+                methods = methods,
+                selected = if (stillValid) current.selected else ImageMethod.PROCEDURAL,
+            )
         }
-        _state.update { it.copy(methods = methods) }
     }
 
     fun onPromptChange(value: String) = _state.update { it.copy(prompt = value) }
