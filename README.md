@@ -130,3 +130,11 @@ compileSdk 35 / minSdk 26.
 
 Done: real on-device diffusion (stable-diffusion.cpp), MP4 video export, save/share for
 all media, add-model-by-URL, optional (not required) Hugging Face token.
+
+## Contributing
+
+Issues and PRs welcome. Test changes on a physical device when touching native or engine code.
+
+## License
+
+MIT
