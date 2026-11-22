@@ -1,6 +1,6 @@
+
 name: Android Build
 
-# Build the APK on every commit that touches the app or its build configuration.
 on:
   push:
     branches: ["**"]
@@ -51,12 +51,15 @@ jobs:
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        run: |
+          echo "ANDROID_HOME=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          sdkmanager --version
 
       - name: Install SDK packages
         run: |
           sdkmanager --install "platforms;android-35" "build-tools;35.0.0" "platform-tools" \
-            "ndk;27.0.12077973" "cmake;3.22.1" > /dev/null
+            "ndk;27.0.12077973" "cmake;3.22.1"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
